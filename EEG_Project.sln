@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30517.126
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EEG_Project", "EEG_Project.csproj", "{8C9527E9-BB1B-4BB7-8E61-AF83132B87AB}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8C9527E9-BB1B-4BB7-8E61-AF83132B87AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8C9527E9-BB1B-4BB7-8E61-AF83132B87AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8C9527E9-BB1B-4BB7-8E61-AF83132B87AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8C9527E9-BB1B-4BB7-8E61-AF83132B87AB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {FD91CCAC-3A9D-4EBC-836F-E9D1C322D388}
+	EndGlobalSection
+EndGlobal
