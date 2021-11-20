@@ -47,7 +47,7 @@ namespace EEG_Project
         }
 
         private int _numOfSegments = 1;
-        public int NumOfSegments
+        public int SecondsPerSegment
         {
             get => _numOfSegments;
             set
@@ -62,7 +62,7 @@ namespace EEG_Project
         {
             get
             {
-                _graphRange = new int[NumOfSegments];
+                _graphRange = new int[_totalColums / NUM_HZ / SecondsPerSegment];
                 for (int i = 0; i < _graphRange.Length; i++)
                     _graphRange[i] = i + 1;
                 return _graphRange;
@@ -76,6 +76,8 @@ namespace EEG_Project
             set => SetProperty(ref _segmentStart, value);
         }
         #endregion
+
+        private int _totalColums;
 
 
         #region commands
@@ -102,12 +104,13 @@ namespace EEG_Project
                 RecordingMatrix = Transpose(matrix);
                 var temp = new PlotModel();
                 Model.Title = "Recording";
+                _totalColums = RecordingMatrix.GetLength(1);
                 for (int i = 0; i < RecordingMatrix.GetLength(0); i++)
                 {
                     var series = new LineSeries() { Title = "Channel " + i };
-                    for (int j = (RecordingMatrix.GetLength(1) / NumOfSegments) * SegmentStart; j <= (RecordingMatrix.GetLength(1) / NumOfSegments) * (SegmentStart + 1); j += NUM_HZ)
+                    for (int j = SegmentStart * SecondsPerSegment * NUM_HZ; j <= ((SegmentStart + 1) * SecondsPerSegment) * NUM_HZ; j++)
                     {
-                        series.Points.Add(new DataPoint(j / NUM_HZ, RecordingMatrix[i, j]));
+                        series.Points.Add(new DataPoint(j , RecordingMatrix[i, j]));
                     }
                     temp.Series.Add(series);
                 }

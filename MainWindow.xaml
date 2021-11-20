@@ -22,8 +22,8 @@
             <Button Content="Upload" IsEnabled="{Binding IsUploadButtonEnabled}" Command="{Binding UploadRecordingCommand}" Height="30"/>
         </StackPanel>
         <StackPanel Grid.Row="1" Orientation="Horizontal">
-            <Label Content="Number of segments:" VerticalAlignment="Center"/>
-            <TextBox Text="{Binding NumOfSegments, Mode=TwoWay}" Width="30" VerticalAlignment="Center"/>
+            <Label Content="Seconds per segment:" VerticalAlignment="Center"/>
+            <TextBox Text="{Binding SecondsPerSegment, Mode=TwoWay}" Width="30" VerticalAlignment="Center"/>
             <ComboBox Name="GraphToShow" ItemsSource="{Binding GraphRange}" VerticalAlignment="Center" Width="40">
                 <i:Interaction.Triggers>
                     <i:EventTrigger EventName="SelectionChanged">
