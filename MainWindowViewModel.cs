@@ -1,19 +1,26 @@
-﻿using EEG_Project.Services;
+﻿using CenterSpace.NMath.Core;
+using EEG_Project.Services;
 using Microsoft.Win32;
 using OxyPlot;
+using OxyPlot.Axes;
 using OxyPlot.Series;
 using Prism.Commands;
 using Prism.Mvvm;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace EEG_Project
 {
     public class MainWindowViewModel : BindableBase
     {
-        private const int NUM_HZ = 128;
-        RecordingsService _recordingsService;
+        private const int NUM_HZ = 127;
+        private RecordingsService _recordingsService;
+        private HttpService _httpService;
         public MainWindowViewModel()
         {
             _recordingsService = new RecordingsService();
+            _httpService = new HttpService();
         }
 
 
@@ -31,19 +38,40 @@ namespace EEG_Project
             get => _isUploadButtonEnabled;
             set => SetProperty(ref _isUploadButtonEnabled, value);
         }
+        private int _numHz = NUM_HZ;
+        public int NumHz
+        {
+            get => _numHz;
+            set => SetProperty(ref _numHz, value);
+        }
 
-        private int[,] _recordingMatrix;
-        public int[,] RecordingMatrix
+        private double[,] _recordingMatrix;
+        public double[,] RecordingMatrix
         {
             get => _recordingMatrix;
             set => SetProperty(ref _recordingMatrix, value);
         }
 
-        private PlotModel _model = new PlotModel();
-        public PlotModel Model
+        private PlotModel _ratDataModel = new PlotModel();
+        public PlotModel RawDataModel
         {
-            get => _model;
-            set => SetProperty(ref _model, value);
+            get => _ratDataModel;
+            set => SetProperty(ref _ratDataModel, value);
+        }
+
+
+        private PlotModel _welchModel = new PlotModel();
+        public PlotModel WelchModel
+        {
+            get => _welchModel;
+            set => SetProperty(ref _welchModel, value);
+        }
+
+        private PlotModel _wavesModel = new PlotModel();
+        public PlotModel WavesModel
+        {
+            get => _wavesModel;
+            set => SetProperty(ref _wavesModel, value);
         }
 
         private int _numOfSegments = 1;
@@ -98,25 +126,69 @@ namespace EEG_Project
         private DelegateCommand _uploadRecordingCommand;
         public DelegateCommand UploadRecordingCommand
         {
-            get => _uploadRecordingCommand ?? new DelegateCommand(() =>
+            get => _uploadRecordingCommand ?? new DelegateCommand(async () =>
             {
-                var matrix = _recordingsService.ReadRecordingFile(SelectedRecordingPath);
-                RecordingMatrix = Transpose(matrix);
-                var temp = new PlotModel();
-                Model.Title = "Recording";
-                _totalColums = RecordingMatrix.GetLength(1);
-                for (int i = 0; i < RecordingMatrix.GetLength(0); i++)
-                {
-                    var series = new LineSeries() { Title = "Channel " + i };
-                    for (int j = SegmentStart * SecondsPerSegment * NUM_HZ; j <= ((SegmentStart + 1) * SecondsPerSegment) * NUM_HZ; j++)
-                    {
-                        series.Points.Add(new DataPoint(j , RecordingMatrix[i, j]));
-                    }
-                    temp.Series.Add(series);
-                }
-                Model = temp;
+                RecordingMatrix = await _recordingsService.ReadRecordingFile(SelectedRecordingPath);
+                BuildRecordingGraphs();
             });
         }
+
+        private async void BuildRecordingGraphs()
+        {
+            BuildRawRecordingGraph();
+            await BuildWelchGraph();
+            BuildWaveHistogramGraph();
+        }
+
+        private void BuildWaveHistogramGraph()
+        {
+            string[] names = new string[] { "Delta", "Theta", "Alpha", "Beta", "Gamma" };
+            var model = new PlotModel();
+            var series = new PieSeries() { Title="Wave Disturbution", InsideLabelColor = OxyColors.White };
+            for (int i = 0; i < wavesArray.Length; i++)
+            {
+                series.Slices.Add(new PieSlice(names[i], wavesArray[i]));
+            }
+            model.Series.Add(series);
+            WavesModel = model;
+        }
+
+        private async Task BuildWelchGraph()
+        {
+            (double[] freqs, double[] psd) = await _httpService.Welch(RecordingMatrix, 4, NumHz);
+            var psdTempModel = new PlotModel();
+            psdTempModel.Title = "Welch";
+            var psdSeries = new LineSeries() { Title = "PSD" };
+            for (int i = 0; i < psd.Length; i++)
+            {
+                if (freqs[i] < 4) wavesArray[0] += psd[i];
+                else if (freqs[i] >= 4 && freqs[i] <= 7) wavesArray[1] += psd[i];
+                else if (freqs[i] >= 8 && freqs[i] <= 15) wavesArray[2] += psd[i];
+                else if (freqs[i] >= 16 && freqs[i] <= 31) wavesArray[3] += psd[i];
+                else if (freqs[i] >= 32) wavesArray[4] += psd[i];
+                psdSeries.Points.Add(new DataPoint(freqs[i], psd[i]));
+            }
+            psdTempModel.Series.Add(psdSeries);
+            WelchModel = psdTempModel;
+        }
+
+        private void BuildRawRecordingGraph()
+        {
+            var temp = new PlotModel();
+            RawDataModel.Title = "Recording";
+            _totalColums = RecordingMatrix.GetLength(1);
+            for (int i = 0; i < RecordingMatrix.GetLength(0); i++)
+            {
+                var series = new LineSeries() { Title = "Channel " + i };
+                for (int j = SegmentStart * SecondsPerSegment * NUM_HZ; j < ((SegmentStart + 1) * SecondsPerSegment) * NUM_HZ; j++)
+                {
+                    series.Points.Add(new DataPoint(j, RecordingMatrix[i, j]));
+                }
+                temp.Series.Add(series);
+            }
+            RawDataModel = temp;
+        }
+
         private DelegateCommand<object> _graphRangeSelectionChangedCommand;
         public DelegateCommand<object> GraphRangeSelectionChangedCommand
         {
@@ -127,23 +199,9 @@ namespace EEG_Project
         }
         #endregion
 
-        private int[,] Transpose(int[,] matrix)
-        {
-            int w = matrix.GetLength(0);
-            int h = matrix.GetLength(1);
 
-            int[,] result = new int[h, w];
-
-            for (int i = 0; i < w; i++)
-            {
-                for (int j = 0; j < h; j++)
-                {
-                    result[j, i] = matrix[i, j];
-                }
-            }
-
-            return result;
-        }
+        private double[] wavesArray = new double[5]; //delta,theta,alpha,beta,gamma
+      
     }
 
 }

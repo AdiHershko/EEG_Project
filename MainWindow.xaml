@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:EEG_Project" xmlns:oxy="http://oxyplot.org/wpf"
         xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="MainWindow" Height="800" Width="1020">
     <Window.DataContext>
         <local:MainWindowViewModel/>
     </Window.DataContext>
@@ -19,6 +19,8 @@
         <StackPanel Grid.Row="0" Orientation="Horizontal">
             <TextBox IsEnabled="False" Text="{Binding SelectedRecordingPath}" Height="30" Width="500"/>
             <Button Content="Select recording" Command="{Binding BrowseCommand}" Height="30"/>
+            <Label Content="Number of HZ:" VerticalAlignment="Center"/>
+            <TextBox Text="{Binding NumHz}" Height="30" Width="30"/>
             <Button Content="Upload" IsEnabled="{Binding IsUploadButtonEnabled}" Command="{Binding UploadRecordingCommand}" Height="30"/>
         </StackPanel>
         <StackPanel Grid.Row="1" Orientation="Horizontal">
@@ -32,6 +34,15 @@
                 </i:Interaction.Triggers>
             </ComboBox>
         </StackPanel>
-        <oxy:PlotView Grid.Row="2" Model="{Binding Model, Mode=TwoWay}"></oxy:PlotView>
+        <Grid Grid.Row="2">
+            <Grid.RowDefinitions>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+            </Grid.RowDefinitions>
+            <oxy:PlotView Grid.Row="0" Model="{Binding RawDataModel, Mode=TwoWay}"></oxy:PlotView>
+            <oxy:PlotView Grid.Row="1" Model="{Binding WelchModel, Mode=TwoWay}"></oxy:PlotView>
+            <oxy:PlotView Grid.Row="2" Model="{Binding WavesModel, Mode=TwoWay}"></oxy:PlotView>
+        </Grid>
     </Grid>
 </Window>
