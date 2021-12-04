@@ -33,6 +33,9 @@
                     </i:EventTrigger>
                 </i:Interaction.Triggers>
             </ComboBox>
+            <Label Content="Number of seconds for welch: " VerticalAlignment="Center"/>
+            <TextBox Text="{Binding SecondsForWelch}" VerticalAlignment="Center" Width="30" VerticalContentAlignment="Center"/>
+            <Button Content="Detect waves" VerticalAlignment="Center" Command="{Binding DetectWavesCommand}"/>
         </StackPanel>
         <Grid Grid.Row="2">
             <Grid.RowDefinitions>

@@ -45,6 +45,12 @@ namespace EEG_Project
             set => SetProperty(ref _numHz, value);
         }
 
+        private int _secondsForWelch = 4;
+        public int SecondsForWelch
+        {
+            get => _secondsForWelch;
+            set => SetProperty(ref _secondsForWelch, value);
+        }
         private double[,] _recordingMatrix;
         public double[,] RecordingMatrix
         {
@@ -90,7 +96,7 @@ namespace EEG_Project
         {
             get
             {
-                _graphRange = new int[_totalColums / NUM_HZ / SecondsPerSegment];
+                _graphRange = new int[_totalColums / NumHz / SecondsPerSegment];
                 for (int i = 0; i < _graphRange.Length; i++)
                     _graphRange[i] = i + 1;
                 return _graphRange;
@@ -133,11 +139,9 @@ namespace EEG_Project
             });
         }
 
-        private async void BuildRecordingGraphs()
+        private void BuildRecordingGraphs()
         {
             BuildRawRecordingGraph();
-            await BuildWelchGraph();
-            BuildWaveHistogramGraph();
         }
 
         private void BuildWaveHistogramGraph()
@@ -155,7 +159,7 @@ namespace EEG_Project
 
         private async Task BuildWelchGraph()
         {
-            (double[] freqs, double[] psd) = await _httpService.Welch(RecordingMatrix, 4, NumHz);
+            (double[] freqs, double[] psd) = await _httpService.Welch(RecordingMatrix, SecondsForWelch, NumHz);
             var psdTempModel = new PlotModel();
             psdTempModel.Title = "Welch";
             var psdSeries = new LineSeries() { Title = "PSD" };
@@ -180,7 +184,7 @@ namespace EEG_Project
             for (int i = 0; i < RecordingMatrix.GetLength(0); i++)
             {
                 var series = new LineSeries() { Title = "Channel " + i };
-                for (int j = SegmentStart * SecondsPerSegment * NUM_HZ; j < ((SegmentStart + 1) * SecondsPerSegment) * NUM_HZ; j++)
+                for (int j = SegmentStart * SecondsPerSegment * NumHz; j < ((SegmentStart + 1) * SecondsPerSegment) * NumHz; j++)
                 {
                     series.Points.Add(new DataPoint(j, RecordingMatrix[i, j]));
                 }
@@ -197,6 +201,14 @@ namespace EEG_Project
                 SegmentStart = (int)index;
             });
         }
+
+        private DelegateCommand _detectWavesCommand;
+        public DelegateCommand DetectWavesCommand =>
+            _detectWavesCommand ??= new DelegateCommand(async () =>
+            {
+                await BuildWelchGraph();
+                BuildWaveHistogramGraph();
+            });
         #endregion
 
 
