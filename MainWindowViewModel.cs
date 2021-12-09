@@ -45,6 +45,13 @@ namespace EEG_Project
             set => SetProperty(ref _numHz, value);
         }
 
+        private int _channel = 0;
+        public int Channel
+        {
+            get => _channel;
+            set => SetProperty(ref _channel, value);
+        }
+
         private int _secondsForWelch = 4;
         public int SecondsForWelch
         {
@@ -146,6 +153,7 @@ namespace EEG_Project
 
         private void BuildWaveHistogramGraph()
         {
+            WavesModel = new PlotModel();
             string[] names = new string[] { "Delta", "Theta", "Alpha", "Beta", "Gamma" };
             var model = new PlotModel();
             var series = new PieSeries() { Title="Wave Disturbution", InsideLabelColor = OxyColors.White };
@@ -159,7 +167,7 @@ namespace EEG_Project
 
         private async Task BuildWelchGraph()
         {
-            (double[] freqs, double[] psd) = await _httpService.Welch(RecordingMatrix, SecondsForWelch, NumHz);
+            (double[] freqs, double[] psd) = await _httpService.Welch(RecordingMatrix, Channel, SecondsForWelch, NumHz);
             var psdTempModel = new PlotModel();
             psdTempModel.Title = "Welch";
             var psdSeries = new LineSeries() { Title = "PSD" };

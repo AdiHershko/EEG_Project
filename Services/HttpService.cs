@@ -16,14 +16,15 @@ namespace EEG_Project.Services
             client = new RestClient("http://127.0.0.1:5000");
         }
 
-        public async Task<(double[], double[])> Welch(double[,] data, int time, int hz)
+        public async Task<(double[], double[])> Welch(double[,] data, int channel, int time, int hz)
         {
             var request = new RestRequest();
             request.Resource = "welch";
             request.AddParameter("data", JsonConvert.SerializeObject(data));
             request.AddParameter("time", JsonConvert.SerializeObject(time));
             request.AddParameter("hz", JsonConvert.SerializeObject(hz));
-            var response = client.Get(request);
+            request.AddParameter("channel", JsonConvert.SerializeObject(channel));
+            var response = client.Post(request);
             var arrays = JsonConvert.DeserializeObject<string[]>(response.Content);
             var freqs = JsonConvert.DeserializeObject<double[]>(arrays[0]);
             var psd = JsonConvert.DeserializeObject<double[]>(arrays[1]);
