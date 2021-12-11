@@ -1,12 +1,16 @@
 ﻿using CenterSpace.NMath.Core;
 using EEG_Project.Services;
+using EnumsNET;
 using Microsoft.Win32;
 using OxyPlot;
 using OxyPlot.Axes;
 using OxyPlot.Series;
 using Prism.Commands;
 using Prism.Mvvm;
+using Prism.Regions;
+using Prism.Services.Dialogs;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -14,13 +18,22 @@ namespace EEG_Project
 {
     public class MainWindowViewModel : BindableBase
     {
-        private const int NUM_HZ = 127;
-        private RecordingsService _recordingsService;
-        private HttpService _httpService;
-        public MainWindowViewModel()
+        private IRecordingsService _recordingsService;
+        private IHttpService _httpService;
+        private IDialogService _dialogService;
+
+        //public MainWindowViewModel()
+        //{
+        //    _recordingsService = new RecordingsService();
+        //    _httpService = new HttpService();
+        //}
+
+        public MainWindowViewModel(IDialogService dialogService, IRecordingsService recordingsService, IHttpService httpService)
         {
-            _recordingsService = new RecordingsService();
-            _httpService = new HttpService();
+            _dialogService = dialogService;
+            _recordingsService = recordingsService;
+            _httpService = httpService;
+            
         }
 
 
@@ -38,11 +51,34 @@ namespace EEG_Project
             get => _isUploadButtonEnabled;
             set => SetProperty(ref _isUploadButtonEnabled, value);
         }
-        private int _numHz = NUM_HZ;
+
+        private bool _isUploaded;
+        public bool IsUploaded
+        {
+            get => _isUploaded;
+            set => SetProperty(ref _isUploaded, value);
+        }
+
+
+        private int _numHz = 127;
         public int NumHz
         {
             get => _numHz;
             set => SetProperty(ref _numHz, value);
+        }
+
+        private int _numberOfChannels;
+        public int NumberOfChannels
+        {
+            get => _numberOfChannels;
+            set => SetProperty(ref _numberOfChannels, value);
+        }
+
+        private int _recordingLength;
+        public int RecordingLength
+        {
+            get => _recordingLength;
+            set => SetProperty(ref _recordingLength, value);
         }
 
         private int _channel = 0;
@@ -65,11 +101,21 @@ namespace EEG_Project
             set => SetProperty(ref _recordingMatrix, value);
         }
 
-        private PlotModel _ratDataModel = new PlotModel();
-        public PlotModel RawDataModel
+        private int _numberOfParts;
+        public int NumberOfParts
+        { 
+            get => _numberOfParts;
+            set => SetProperty(ref _numberOfParts, value);
+
+        }
+
+        public IReadOnlyList<WaveType> WaveTypes { get; } = Enums.GetValues<WaveType>();
+
+        private WaveType _selectedWaveType = WaveType.Delta;
+        public WaveType SelectedWaveType
         {
-            get => _ratDataModel;
-            set => SetProperty(ref _ratDataModel, value);
+            get => _selectedWaveType;
+            set => SetProperty(ref _selectedWaveType, value);
         }
 
 
@@ -87,45 +133,24 @@ namespace EEG_Project
             set => SetProperty(ref _wavesModel, value);
         }
 
-        private int _numOfSegments = 1;
-        public int SecondsPerSegment
+        private PlotModel _partialWavesModel = new PlotModel();
+        public PlotModel PartialWavesModel
         {
-            get => _numOfSegments;
-            set
-            {
-                SetProperty(ref _numOfSegments, value);
-                RaisePropertyChanged(nameof(GraphRange));
-            }
+            get => _partialWavesModel;
+            set => SetProperty(ref _partialWavesModel, value);
         }
 
-        private int[] _graphRange;
-        public int[] GraphRange
-        {
-            get
-            {
-                _graphRange = new int[_totalColums / NumHz / SecondsPerSegment];
-                for (int i = 0; i < _graphRange.Length; i++)
-                    _graphRange[i] = i + 1;
-                return _graphRange;
-            }
-        }
 
-        private int _segmentStart;
-        public int SegmentStart
-        {
-            get => _segmentStart;
-            set => SetProperty(ref _segmentStart, value);
-        }
+
+
+
         #endregion
-
-        private int _totalColums;
 
 
         #region commands
         private DelegateCommand _browseCommand;
-        public DelegateCommand BrowseCommand
-        {
-            get => _browseCommand ?? new DelegateCommand(() =>
+        public DelegateCommand BrowseCommand =>
+            _browseCommand ??= new DelegateCommand(() =>
             {
                 OpenFileDialog o = new OpenFileDialog();
                 if (o.ShowDialog() == true)
@@ -134,23 +159,89 @@ namespace EEG_Project
                     IsUploadButtonEnabled = true;
                 }
             });
-        }
-
+      
         private DelegateCommand _uploadRecordingCommand;
-        public DelegateCommand UploadRecordingCommand
-        {
-            get => _uploadRecordingCommand ?? new DelegateCommand(async () =>
+        public DelegateCommand UploadRecordingCommand =>
+            _uploadRecordingCommand ??= new DelegateCommand(async () =>
             {
                 RecordingMatrix = await _recordingsService.ReadRecordingFile(SelectedRecordingPath);
-                BuildRecordingGraphs();
+                NumberOfChannels = RecordingMatrix.GetLength(0);
+                RecordingLength = RecordingMatrix.GetLength(1) / NumHz;
+                IsUploaded = true;
             });
-        }
 
-        private void BuildRecordingGraphs()
+        private DelegateCommand _openRawDataDialogCommand;
+        public DelegateCommand OpenRawDataDialogCommand =>
+            _openRawDataDialogCommand ??= new DelegateCommand(() =>
+             {
+                 var parameters = new DialogParameters
+                 {
+                     {"record", RecordingMatrix },
+                     {"hz", NumHz },
+                     {"channels", NumberOfChannels }
+                 };
+                 _dialogService.ShowDialog(nameof(RawDataView), parameters, r=> { });
+             });
+
+        private DelegateCommand<object> _waveSelectionChangedCommand;
+        public DelegateCommand<object> WaveSelectionChangedCommand =>
+            _waveSelectionChangedCommand ??= new DelegateCommand<object>(wave =>
+            {
+                SelectedWaveType = (WaveType)wave;
+                BuildPartialWaveGraph();
+            });
+
+        private DelegateCommand _detectWavesCommand;
+        public DelegateCommand DetectWavesCommand =>
+            _detectWavesCommand ??= new DelegateCommand(async () =>
+            {
+                await BuildWelchGraph();
+                BuildWaveHistogramGraph();
+            });
+
+        private DelegateCommand _divideAndWelchCommand;
+        public DelegateCommand DivideAndWelchCommand =>
+            _divideAndWelchCommand ??= new DelegateCommand(async () =>
+            {
+                wavesArrayList.Clear();
+                for (int i=0;i<NumberOfParts;i++)
+                {
+                    var row = GetRow(RecordingMatrix, Channel);
+                    (double[] freqs, double[] psd) = await Welch(row.Skip(i * row.Length / NumberOfParts).Take(row.Length / NumberOfParts).ToArray(), SecondsForWelch, NumHz);
+                    wavesArrayList.Add(new double[5]);
+                    for (int j = 0; j < psd.Length; j++)
+                    {
+                        if (freqs[j] < 4) wavesArrayList[i][0] += psd[j];
+                        else if (freqs[j] >= 4 && freqs[j] <= 7) wavesArrayList[i][1] += psd[j];
+                        else if (freqs[j] >= 8 && freqs[j] <= 15) wavesArrayList[i][2] += psd[j];
+                        else if (freqs[j] >= 16 && freqs[j] <= 31) wavesArrayList[i][3] += psd[j];
+                        else if (freqs[j] >= 32) wavesArrayList[i][4] += psd[j];
+                    }
+                }
+                BuildPartialWaveGraph();
+            });
+        private List<double[]> wavesArrayList = new List<double[]>();
+        #endregion
+
+
+        public double[] GetRow(double[,] matrix, int rowNumber)
         {
-            BuildRawRecordingGraph();
+            return Enumerable.Range(0, matrix.GetLength(1))
+                    .Select(x => matrix[rowNumber, x])
+                    .ToArray();
         }
 
+        private void BuildPartialWaveGraph()
+        {
+            var model = new PlotModel();
+            var series = new LineSeries() { Title = "Wave partial disturbution" };
+            for(int i=0;i< wavesArrayList.Count;i++)
+            {
+                series.Points.Add(new DataPoint(i, wavesArrayList[i][(int)SelectedWaveType]));
+            }
+            model.Series.Add(series);
+            PartialWavesModel = model;
+        }
         private void BuildWaveHistogramGraph()
         {
             WavesModel = new PlotModel();
@@ -167,7 +258,7 @@ namespace EEG_Project
 
         private async Task BuildWelchGraph()
         {
-            (double[] freqs, double[] psd) = await _httpService.Welch(RecordingMatrix, Channel, SecondsForWelch, NumHz);
+            (double[] freqs, double[] psd) = await Welch(RecordingMatrix, Channel, SecondsForWelch, NumHz);
             var psdTempModel = new PlotModel();
             psdTempModel.Title = "Welch";
             var psdSeries = new LineSeries() { Title = "PSD" };
@@ -184,43 +275,21 @@ namespace EEG_Project
             WelchModel = psdTempModel;
         }
 
-        private void BuildRawRecordingGraph()
+        private async Task<(double[], double[])> Welch(double[,] recordingMatrix, int channel, int secondsForWelch, int numHz)
         {
-            var temp = new PlotModel();
-            RawDataModel.Title = "Recording";
-            _totalColums = RecordingMatrix.GetLength(1);
-            for (int i = 0; i < RecordingMatrix.GetLength(0); i++)
-            {
-                var series = new LineSeries() { Title = "Channel " + i };
-                for (int j = SegmentStart * SecondsPerSegment * NumHz; j < ((SegmentStart + 1) * SecondsPerSegment) * NumHz; j++)
-                {
-                    series.Points.Add(new DataPoint(j, RecordingMatrix[i, j]));
-                }
-                temp.Series.Add(series);
-            }
-            RawDataModel = temp;
+            return await _httpService.Welch(recordingMatrix, channel, secondsForWelch, numHz);
         }
 
-        private DelegateCommand<object> _graphRangeSelectionChangedCommand;
-        public DelegateCommand<object> GraphRangeSelectionChangedCommand
+        private async Task<(double[], double[])> Welch(double[] array, int secondsForWelch, int numHz)
         {
-            get => _graphRangeSelectionChangedCommand ?? new DelegateCommand<object>((index) =>
-            {
-                SegmentStart = (int)index;
-            });
+            return await _httpService.Welch(array, secondsForWelch, numHz);
         }
 
-        private DelegateCommand _detectWavesCommand;
-        public DelegateCommand DetectWavesCommand =>
-            _detectWavesCommand ??= new DelegateCommand(async () =>
-            {
-                await BuildWelchGraph();
-                BuildWaveHistogramGraph();
-            });
-        #endregion
 
 
         private double[] wavesArray = new double[5]; //delta,theta,alpha,beta,gamma
+
+        public enum WaveType { Delta = 0, Theta = 1, Alpha = 2, Beta = 3, Gamma = 4}
       
     }
 

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace EEG_Project.Services
 {
-    public class RecordingsService
+    public class RecordingsService : IRecordingsService
     {
         public RecordingsService()
         {

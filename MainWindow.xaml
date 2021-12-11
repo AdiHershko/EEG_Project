@@ -3,51 +3,67 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:EEG_Project" xmlns:oxy="http://oxyplot.org/wpf"
+        xmlns:local="clr-namespace:EEG_Project" 
+        xmlns:oxy="http://oxyplot.org/wpf"
         xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+        xmlns:converters="clr-namespace:EEG_Project.Converters"
         mc:Ignorable="d"
         Title="MainWindow" Height="800" Width="1020">
-    <Window.DataContext>
-        <local:MainWindowViewModel/>
-    </Window.DataContext>
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="0.2*"/>
-            <RowDefinition Height="0.1*"/>
-            <RowDefinition Height="0.7*"/>
-        </Grid.RowDefinitions>
-        <StackPanel Grid.Row="0" Orientation="Horizontal">
+    <Window.Resources>
+        <converters:BoolToVisConverter x:Key="BoolToVisConverter"/>
+    </Window.Resources>
+    <StackPanel Orientation="Vertical">
+        <DockPanel>
             <TextBox IsEnabled="False" Text="{Binding SelectedRecordingPath}" Height="30" Width="500"/>
-            <Button Content="Select recording" Command="{Binding BrowseCommand}" Height="30"/>
+            <Button Content="Browse recording" Command="{Binding BrowseCommand}" Height="30"/>
             <Label Content="Number of HZ:" VerticalAlignment="Center"/>
             <TextBox Text="{Binding NumHz}" Height="30" Width="30"/>
             <Button Content="Upload" IsEnabled="{Binding IsUploadButtonEnabled}" Command="{Binding UploadRecordingCommand}" Height="30"/>
-        </StackPanel>
-        <StackPanel Grid.Row="1" Orientation="Horizontal">
-            <Label Content="Seconds per segment:" VerticalAlignment="Center"/>
-            <TextBox Text="{Binding SecondsPerSegment, Mode=TwoWay}" Width="30" VerticalAlignment="Center"/>
-            <ComboBox Name="GraphToShow" ItemsSource="{Binding GraphRange}" VerticalAlignment="Center" Width="40">
-                <i:Interaction.Triggers>
-                    <i:EventTrigger EventName="SelectionChanged">
-                        <i:InvokeCommandAction Command="{Binding GraphRangeSelectionChangedCommand}" CommandParameter="{Binding ElementName=GraphToShow, Path=SelectedIndex}"/>
-                    </i:EventTrigger>
-                </i:Interaction.Triggers>
-            </ComboBox>
-            <Label Content="Number of seconds for welch: " VerticalAlignment="Center"/>
-            <TextBox Text="{Binding SecondsForWelch}" VerticalAlignment="Center" Width="30" VerticalContentAlignment="Center"/>
-            <Label Content="Channel:" VerticalAlignment="Center"/>
-            <TextBox Text="{Binding Channel}" VerticalAlignment="Center" Width="30"/>
-            <Button Content="Detect waves" VerticalAlignment="Center" Command="{Binding DetectWavesCommand}"/>
-        </StackPanel>
-        <Grid Grid.Row="2">
-            <Grid.RowDefinitions>
-                <RowDefinition/>
-                <RowDefinition/>
-                <RowDefinition/>
-            </Grid.RowDefinitions>
-            <oxy:PlotView Grid.Row="0" Model="{Binding RawDataModel, Mode=TwoWay}"></oxy:PlotView>
-            <oxy:PlotView Grid.Row="1" Model="{Binding WelchModel, Mode=TwoWay}"></oxy:PlotView>
-            <oxy:PlotView Grid.Row="2" Model="{Binding WavesModel, Mode=TwoWay}"></oxy:PlotView>
-        </Grid>
-    </Grid>
+        </DockPanel>
+        <DockPanel  Visibility="{Binding IsUploaded, Converter={StaticResource BoolToVisConverter}}">
+            <Label Content="Channels detected:"/>
+            <Label Content="{Binding NumberOfChannels}"/>
+            <Label Content="Recording length:"/>
+            <Label Content="{Binding RecordingLength}"/>
+            <Button Content="View raw data graph" Command="{Binding OpenRawDataDialogCommand}"/>
+        </DockPanel>
+        <GroupBox Header="Welch" Visibility="{Binding IsUploaded, Converter={StaticResource BoolToVisConverter}}">
+            <StackPanel Orientation="Vertical">
+                <StackPanel Grid.Row="1" Orientation="Horizontal">
+                    <Label Content="Number of seconds for welch: " VerticalAlignment="Center"/>
+                    <TextBox Text="{Binding SecondsForWelch}" VerticalAlignment="Center" Width="30" VerticalContentAlignment="Center"/>
+                    <Label Content="Channel:" VerticalAlignment="Center"/>
+                    <TextBox Text="{Binding Channel}" VerticalAlignment="Center" Width="30"/>
+                    <Button Content="Detect waves" VerticalAlignment="Center" Command="{Binding DetectWavesCommand}"/>
+                </StackPanel>
+                <Grid Height="400">
+                    <Grid.RowDefinitions>
+                        <RowDefinition/>
+                        <RowDefinition/>
+                    </Grid.RowDefinitions>
+                    <oxy:PlotView Grid.Row="0" Model="{Binding WelchModel, Mode=TwoWay}"></oxy:PlotView>
+                    <oxy:PlotView Grid.Row="1" Model="{Binding WavesModel, Mode=TwoWay}"></oxy:PlotView>
+                </Grid>
+            </StackPanel>
+        </GroupBox>
+        <GroupBox Header="Recording parts" Visibility="{Binding IsUploaded, Converter={StaticResource BoolToVisConverter}}">
+            <StackPanel Orientation="Vertical">
+                <DockPanel>
+                    <Label Content="Divide file into parts:"/>
+                    <TextBox Text="{Binding NumberOfParts}"/>
+                    <Label Content="Channel:"/>
+                    <TextBox Text="{Binding Channel}"/>
+                    <Button Content="Divide and welch" Command="{Binding DivideAndWelchCommand}"/>
+                    <ComboBox Name="Waves" ItemsSource="{Binding WaveTypes}" SelectedItem="{Binding SelectedWaveType}" HorizontalAlignment="Left" Width="100">
+                        <i:Interaction.Triggers>
+                            <i:EventTrigger EventName="SelectionChanged">
+                                <i:InvokeCommandAction Command="{Binding WaveSelectionChangedCommand}" CommandParameter="{Binding ElementName=Waves, Path=SelectedItem}"/>
+                            </i:EventTrigger>
+                        </i:Interaction.Triggers>
+                    </ComboBox>
+                </DockPanel>
+                <oxy:PlotView Model="{Binding PartialWavesModel}" Height="200"/>
+            </StackPanel>
+        </GroupBox>
+    </StackPanel>
 </Window>

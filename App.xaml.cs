@@ -1,4 +1,8 @@
-﻿using System;
+﻿using EEG_Project.Services;
+using Microsoft.Extensions.DependencyInjection;
+using Prism.Ioc;
+using Prism.Unity;
+using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
@@ -11,7 +15,22 @@ namespace EEG_Project
     /// <summary>
     /// Interaction logic for App.xaml
     /// </summary>
-    public partial class App : Application
+    public partial class App : PrismApplication
     {
+        protected override Window CreateShell()
+        {
+
+            return Container.Resolve<MainWindow>();
+        }
+
+        protected override void RegisterTypes(IContainerRegistry containerRegistry)
+        {
+            var container = containerRegistry.GetContainer();
+            var services = new ServiceCollection();
+            containerRegistry.Register<IRecordingsService, RecordingsService>();
+            containerRegistry.Register<IHttpService, HttpService>();
+            containerRegistry.RegisterDialog<RawDataView>();
+
+        }
     }
 }
