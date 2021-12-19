@@ -11,6 +11,7 @@ using Prism.Regions;
 using Prism.Services.Dialogs;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -33,7 +34,7 @@ namespace EEG_Project
             _dialogService = dialogService;
             _recordingsService = recordingsService;
             _httpService = httpService;
-            
+
         }
 
 
@@ -103,7 +104,7 @@ namespace EEG_Project
 
         private int _numberOfParts;
         public int NumberOfParts
-        { 
+        {
             get => _numberOfParts;
             set => SetProperty(ref _numberOfParts, value);
 
@@ -159,7 +160,7 @@ namespace EEG_Project
                     IsUploadButtonEnabled = true;
                 }
             });
-      
+
         private DelegateCommand _uploadRecordingCommand;
         public DelegateCommand UploadRecordingCommand =>
             _uploadRecordingCommand ??= new DelegateCommand(async () =>
@@ -180,8 +181,15 @@ namespace EEG_Project
                      {"hz", NumHz },
                      {"channels", NumberOfChannels }
                  };
-                 _dialogService.ShowDialog(nameof(RawDataView), parameters, r=> { });
+                 _dialogService.ShowDialog(nameof(RawDataView), parameters, r => { });
              });
+
+        private DelegateCommand _openTrainModelDialogCommand;
+        public DelegateCommand OpenTrainModelDialogCommand =>
+            _openTrainModelDialogCommand ??= new DelegateCommand(() =>
+            {
+                _dialogService.ShowDialog(nameof(TrainModelView));
+            });
 
         private DelegateCommand<object> _waveSelectionChangedCommand;
         public DelegateCommand<object> WaveSelectionChangedCommand =>
@@ -204,7 +212,7 @@ namespace EEG_Project
             _divideAndWelchCommand ??= new DelegateCommand(async () =>
             {
                 wavesArrayList.Clear();
-                for (int i=0;i<NumberOfParts;i++)
+                for (int i = 0; i < NumberOfParts; i++)
                 {
                     var row = GetRow(RecordingMatrix, Channel);
                     (double[] freqs, double[] psd) = await Welch(row.Skip(i * row.Length / NumberOfParts).Take(row.Length / NumberOfParts).ToArray(), SecondsForWelch, NumHz);
@@ -221,6 +229,46 @@ namespace EEG_Project
                 BuildPartialWaveGraph();
             });
         private List<double[]> wavesArrayList = new List<double[]>();
+
+        private DelegateCommand _buildDataCommand;
+        public DelegateCommand BuildDataCommand =>
+            _buildDataCommand ??= new DelegateCommand(async () =>
+            {
+                List<List<double[]>> data = new List<List<double[]>>();
+                for (int i = 0; i < NumberOfChannels; i++)
+                {
+                    var l = new List<double[]>();
+                    for (int j = 0; j < NumberOfParts; j++)
+                    {
+                        var row = GetRow(RecordingMatrix, i);
+                        (double[] freqs, double[] psd) = await Welch(row.Skip(j * row.Length / NumberOfParts).Take(row.Length / NumberOfParts).ToArray(), SecondsForWelch, NumHz);
+                        l.Add(new double[5]);
+                        for (int k = 0; k < psd.Length; k++)
+                        {
+                            if (freqs[k] < 4) l[j][0] += psd[k];
+                            else if (freqs[k] >= 4 && freqs[k] <= 7) l[j][1] += psd[k];
+                            else if (freqs[k] >= 8 && freqs[k] <= 15) l[j][2] += psd[k];
+                            else if (freqs[k] >= 16 && freqs[k] <= 31) l[j][3] += psd[k];
+                            else if (freqs[k] >= 32) l[j][4] += psd[k];
+                        }
+                    }
+                    data.Add(l);
+                }
+                using (StreamWriter sw = new StreamWriter(@"C:\Users\warnn\Desktop\data\data.csv"))
+                {
+                    for (int i = 0; i < data.Count; i++)
+                    {
+                        for (int j = 0; j < data[i].Count; j++)
+                        {
+                            for (int k = 0; k < data[i][j].Length; k++)
+                            {
+                                sw.Write($"{data[i][j][k]},");
+                            }
+                        }
+                        //sw.WriteLine();
+                    }
+                }
+            });
         #endregion
 
 
@@ -235,7 +283,7 @@ namespace EEG_Project
         {
             var model = new PlotModel();
             var series = new LineSeries() { Title = "Wave partial disturbution" };
-            for(int i=0;i< wavesArrayList.Count;i++)
+            for (int i = 0; i < wavesArrayList.Count; i++)
             {
                 series.Points.Add(new DataPoint(i, wavesArrayList[i][(int)SelectedWaveType]));
             }
@@ -247,7 +295,7 @@ namespace EEG_Project
             WavesModel = new PlotModel();
             string[] names = new string[] { "Delta", "Theta", "Alpha", "Beta", "Gamma" };
             var model = new PlotModel();
-            var series = new PieSeries() { Title="Wave Disturbution", InsideLabelColor = OxyColors.White };
+            var series = new PieSeries() { Title = "Wave Disturbution", InsideLabelColor = OxyColors.White };
             for (int i = 0; i < wavesArray.Length; i++)
             {
                 series.Slices.Add(new PieSlice(names[i], wavesArray[i]));
@@ -289,8 +337,8 @@ namespace EEG_Project
 
         private double[] wavesArray = new double[5]; //delta,theta,alpha,beta,gamma
 
-        public enum WaveType { Delta = 0, Theta = 1, Alpha = 2, Beta = 3, Gamma = 4}
-      
+        public enum WaveType { Delta = 0, Theta = 1, Alpha = 2, Beta = 3, Gamma = 4 }
+
     }
 
 }

@@ -61,6 +61,8 @@
                             </i:EventTrigger>
                         </i:Interaction.Triggers>
                     </ComboBox>
+                    <Button Content="Build data for all channels" Command="{Binding BuildDataCommand}"/>
+                    <Button Content="Model training" Command="{Binding OpenTrainModelDialogCommand}"/>
                 </DockPanel>
                 <oxy:PlotView Model="{Binding PartialWavesModel}" Height="200"/>
             </StackPanel>

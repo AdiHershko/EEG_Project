@@ -30,6 +30,7 @@ namespace EEG_Project
             containerRegistry.Register<IRecordingsService, RecordingsService>();
             containerRegistry.Register<IHttpService, HttpService>();
             containerRegistry.RegisterDialog<RawDataView>();
+            containerRegistry.RegisterDialog<TrainModelView>();
 
         }
     }

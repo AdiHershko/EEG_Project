@@ -44,7 +44,7 @@ namespace EEG_Project.Services
             var freqs = JsonConvert.DeserializeObject<double[]>(arrays[0]);
             var psd = JsonConvert.DeserializeObject<double[]>(arrays[1]);
             return (freqs, psd);
-
         }
+
     }
 }
