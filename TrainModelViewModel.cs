@@ -115,10 +115,10 @@ namespace EEG_Project
                             {
                                 for (int j = 0; j < data[i].Count; j++)
                                 {
-                                    for (int k = 0; k < data[i][j].Length; k++)
-                                    {
-                                        sw.Write($"{data[i][j][k]},");
-                                    }
+                                    //for (int k = 0; k < data[i][j].Length; k++)
+                                    //{
+                                        sw.Write($"{data[i][j][3]},");
+                                    //}
                                 }
                                 //sw.WriteLine();
                             }
@@ -172,10 +172,10 @@ namespace EEG_Project
                             {
                                 for (int j = 0; j < data[i].Count; j++)
                                 {
-                                    for (int k = 0; k < data[i][j].Length; k++)
-                                    {
-                                        sw.Write($"{data[i][j][k]},");
-                                    }
+                                    //for (int k = 0; k < data[i][j].Length; k++)
+                                   // {
+                                        sw.Write($"{data[i][j][3]},");
+                                    //}
                                 }
                                 //sw.WriteLine();
                             }
