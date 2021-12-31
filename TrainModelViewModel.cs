@@ -45,7 +45,7 @@ namespace EEG_Project
             set => SetProperty(ref _numHz, value);
         }
 
-        private int _numberOfParts = 10;
+        private int _numberOfParts = 13;
         public int NumberOfParts
         {
             get => _numberOfParts;
@@ -111,15 +111,17 @@ namespace EEG_Project
                         }
                         using (StreamWriter sw = new StreamWriter(@$"C:\Users\warnn\Desktop\data\adhd\{fileCounter++}.csv"))
                         {
-                            for (int i = 0; i < data.Count; i++)
+                            for (int i = 0; i < l.Count; i++)
                             {
-                                for (int j = 0; j < data[i].Count; j++)
-                                {
-                                    //for (int k = 0; k < data[i][j].Length; k++)
-                                    //{
-                                        sw.Write($"{data[i][j][3]},");
-                                    //}
-                                }
+                                //for (int j = 0; j < data[i].Count; j++)
+                                //{
+                                //for (int k = 0; k < data[i][j].Length; k++)
+                                //{
+                                //sw.Write($"{data[i][j][3]},");
+                                sw.Write($"{l[i][3]},");
+
+                                //}
+                                //}
                                 //sw.WriteLine();
                             }
                         }
@@ -168,15 +170,15 @@ namespace EEG_Project
                         }
                         using (StreamWriter sw = new StreamWriter(@$"C:\Users\warnn\Desktop\data\control\{fileCounter++}.csv"))
                         {
-                            for (int i = 0; i < data.Count; i++)
+                            for (int i = 0; i < l.Count; i++)
                             {
-                                for (int j = 0; j < data[i].Count; j++)
-                                {
+                                //for (int j = 0; j < data[i].Count; j++)
+                                //{
                                     //for (int k = 0; k < data[i][j].Length; k++)
                                    // {
-                                        sw.Write($"{data[i][j][3]},");
+                                        sw.Write($"{l[i][3]},");
                                     //}
-                                }
+                                //}
                                 //sw.WriteLine();
                             }
                         }
