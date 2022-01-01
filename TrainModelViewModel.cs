@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using static EEG_Project.Commons.WaveTypes;
 
 namespace EEG_Project
 {
@@ -15,7 +16,7 @@ namespace EEG_Project
     {
         private readonly IHttpService _httpService;
         private readonly IRecordingsService _recordingsService;
-       
+
 
         public TrainModelViewModel(IHttpService httpService, IRecordingsService recordingsService)
         {
@@ -24,18 +25,25 @@ namespace EEG_Project
         }
 
         #region properties
-        private string _adhdFolderPath = @"C:\Users\warnn\Desktop\חישה\convert_mat_to_csv_adhd";
+        private string _adhdFolderPath = @"convert_mat_to_csv_adhd";
         public string AdhdFolderPath
         {
             get => _adhdFolderPath;
             set => SetProperty(ref _adhdFolderPath, value);
         }
 
-        private string _controlFolderPath = @"C:\Users\warnn\Desktop\חישה\convert_mat_to_csv_control";
+        private string _controlFolderPath = @"convert_mat_to_csv_control";
         public string ControlFolderPath
         {
             get => _controlFolderPath;
             set => SetProperty(ref _controlFolderPath, value);
+        }
+
+        private string _selectedClassificationFilePath;
+        public string SelectedClassificationFilePath
+        {
+            get => _selectedClassificationFilePath;
+            set => SetProperty(ref _selectedClassificationFilePath, value);
         }
 
         private int _numHz = 127;
@@ -45,7 +53,7 @@ namespace EEG_Project
             set => SetProperty(ref _numHz, value);
         }
 
-        private int _numberOfParts = 13;
+        private int _numberOfParts = 15;
         public int NumberOfParts
         {
             get => _numberOfParts;
@@ -59,7 +67,28 @@ namespace EEG_Project
             set => SetProperty(ref _secondsForWelch, value);
         }
 
+        private int _selectedTrainingChannel = 0;
+        public int SelectedTrainingChannel
+        {
+            get => _selectedTrainingChannel;
+            set => SetProperty(ref _selectedTrainingChannel, value);
+        }
 
+        private string _isAdhd = "";
+        public string IsAdhd
+        {
+            get => _isAdhd;
+            set => SetProperty(ref _isAdhd, value);
+        }
+
+        private WaveType _selectedTrainingWaveType = WaveType.Beta;
+        public WaveType SelectedTrainingWaveType
+        {
+            get => _selectedTrainingWaveType;
+            set => SetProperty(ref _selectedTrainingWaveType, value);
+        }
+
+        public IReadOnlyList<WaveType> WaveTypes { get; } = EnumsNET.Enums.GetValues<WaveType>();
         #endregion
 
         #region commands
@@ -67,14 +96,24 @@ namespace EEG_Project
         public DelegateCommand BrowseAdhdCommand =>
             _browseAdhdCommand ??= new DelegateCommand(() =>
             {
-               
+                var dialog = new Ookii.Dialogs.Wpf.VistaFolderBrowserDialog();
+                var res = (bool)dialog.ShowDialog();
+                if(res)
+                {
+                    AdhdFolderPath = dialog.SelectedPath;
+                }
             });
         private DelegateCommand _browseControlCommand;
 
         public DelegateCommand BrowseControlCommand =>
             _browseControlCommand ??= new DelegateCommand(() =>
             {
-               
+                var dialog = new Ookii.Dialogs.Wpf.VistaFolderBrowserDialog();
+                var res = (bool)dialog.ShowDialog();
+                if (res)
+                {
+                    ControlFolderPath = dialog.SelectedPath;
+                }
             });
 
 
@@ -89,47 +128,35 @@ namespace EEG_Project
                     using (var sr = new StreamReader(file))
                     {
                         var recordingMatrix = await _recordingsService.ReadRecordingFile(file);
-                        List<List<double[]>> data = new List<List<double[]>>();
-                        //for (int i = 0; i < NumberOfChannels; i++)
-                        //{
-                            var l = new List<double[]>();
-                            for (int j = 0; j < NumberOfParts; j++)
+                        List<double[]> data = new List<double[]>();
+                        for (int j = 0; j < NumberOfParts; j++)
+                        {
+                            var l = new double[5];
+                            var row = GetRow(recordingMatrix, SelectedTrainingChannel);
+                            (double[] freqs, double[] psd) = await _httpService.Welch(row.Skip(j * row.Length / NumberOfParts).Take(row.Length / NumberOfParts).ToArray(), SecondsForWelch, NumHz);
+                            for (int k = 0; k < psd.Length; k++)
                             {
-                                var row = GetRow(recordingMatrix, 5 /*selected channel*/);
-                                (double[] freqs, double[] psd) = await _httpService.Welch(row.Skip(j * row.Length / NumberOfParts).Take(row.Length / NumberOfParts).ToArray(), SecondsForWelch, NumHz);
-                                l.Add(new double[5]);
-                                for (int k = 0; k < psd.Length; k++)
-                                {
-                                    if (freqs[k] < 4) l[j][0] += psd[k];
-                                    else if (freqs[k] >= 4 && freqs[k] <= 7) l[j][1] += psd[k];
-                                    else if (freqs[k] >= 8 && freqs[k] <= 15) l[j][2] += psd[k];
-                                    else if (freqs[k] >= 16 && freqs[k] <= 31) l[j][3] += psd[k];
-                                    else if (freqs[k] >= 32) l[j][4] += psd[k];
-                                }
-                            //}
+                                if (freqs[k] < 4) l[(int)WaveType.Delta] += psd[k];
+                                else if (freqs[k] >= 4 && freqs[k] <= 7) l[(int)WaveType.Theta] += psd[k];
+                                else if (freqs[k] >= 8 && freqs[k] <= 15) l[(int)WaveType.Alpha] += psd[k];
+                                else if (freqs[k] >= 16 && freqs[k] <= 31) l[(int)WaveType.Beta] += psd[k];
+                                else if (freqs[k] >= 32) l[(int)WaveType.Gamma] += psd[k];
+                            }
                             data.Add(l);
                         }
-                        using (StreamWriter sw = new StreamWriter(@$"C:\Users\warnn\Desktop\data\adhd\{fileCounter++}.csv"))
+                        using (StreamWriter sw = new StreamWriter(@$"data\adhd\{fileCounter++}.csv"))
                         {
-                            for (int i = 0; i < l.Count; i++)
+                            for (int i = 0; i < NumberOfParts; i++)
                             {
-                                //for (int j = 0; j < data[i].Count; j++)
-                                //{
-                                //for (int k = 0; k < data[i][j].Length; k++)
-                                //{
-                                //sw.Write($"{data[i][j][3]},");
-                                sw.Write($"{l[i][3]},");
-
-                                //}
-                                //}
-                                //sw.WriteLine();
+                                sw.Write($"{data[i][(int)SelectedTrainingWaveType]},");
                             }
+                            sw.Write("1"); //1 for adhd label
                         }
                     }
                 }
-                using (StreamWriter sw = new StreamWriter(@$"C:\Users\warnn\Desktop\data\adhd\all\all.csv"))
+                using (StreamWriter sw = new StreamWriter(@$"data\adhd\all\allAdhd.csv"))
                 {
-                    foreach (var file in Directory.GetFiles(@"C:\Users\warnn\Desktop\data\adhd"))
+                    foreach (var file in Directory.GetFiles(@"data\adhd"))
                     {
                         sw.WriteLine(new StreamReader(file).ReadToEnd());
                     }
@@ -148,49 +175,89 @@ namespace EEG_Project
                     using (var sr = new StreamReader(file))
                     {
                         var recordingMatrix = await _recordingsService.ReadRecordingFile(file);
-                        List<List<double[]>> data = new List<List<double[]>>();
-                        //for (int i = 0; i < NumberOfChannels; i++)
-                        //{
-                        var l = new List<double[]>();
+                        List<double[]> data = new List<double[]>();
                         for (int j = 0; j < NumberOfParts; j++)
                         {
-                            var row = GetRow(recordingMatrix, 5 /*selected channel*/);
+                            var l = new double[5];
+                            var row = GetRow(recordingMatrix, SelectedTrainingChannel);
                             (double[] freqs, double[] psd) = await _httpService.Welch(row.Skip(j * row.Length / NumberOfParts).Take(row.Length / NumberOfParts).ToArray(), SecondsForWelch, NumHz);
-                            l.Add(new double[5]);
                             for (int k = 0; k < psd.Length; k++)
                             {
-                                if (freqs[k] < 4) l[j][0] += psd[k];
-                                else if (freqs[k] >= 4 && freqs[k] <= 7) l[j][1] += psd[k];
-                                else if (freqs[k] >= 8 && freqs[k] <= 15) l[j][2] += psd[k];
-                                else if (freqs[k] >= 16 && freqs[k] <= 31) l[j][3] += psd[k];
-                                else if (freqs[k] >= 32) l[j][4] += psd[k];
+                                if (freqs[k] < 4) l[(int)WaveType.Delta] += psd[k];
+                                else if (freqs[k] >= 4 && freqs[k] <= 7) l[(int)WaveType.Theta] += psd[k];
+                                else if (freqs[k] >= 8 && freqs[k] <= 15) l[(int)WaveType.Alpha] += psd[k];
+                                else if (freqs[k] >= 16 && freqs[k] <= 31) l[(int)WaveType.Beta] += psd[k];
+                                else if (freqs[k] >= 32) l[(int)WaveType.Gamma] += psd[k];
                             }
-                            //}
                             data.Add(l);
                         }
-                        using (StreamWriter sw = new StreamWriter(@$"C:\Users\warnn\Desktop\data\control\{fileCounter++}.csv"))
+                        using (StreamWriter sw = new StreamWriter(@$"data\control\{fileCounter++}.csv"))
                         {
-                            for (int i = 0; i < l.Count; i++)
+                            for (int i = 0; i < NumberOfParts; i++)
                             {
-                                //for (int j = 0; j < data[i].Count; j++)
-                                //{
-                                    //for (int k = 0; k < data[i][j].Length; k++)
-                                   // {
-                                        sw.Write($"{l[i][3]},");
-                                    //}
-                                //}
-                                //sw.WriteLine();
+
+                                sw.Write($"{data[i][(int)SelectedTrainingWaveType]},");
                             }
+                            sw.Write("0"); //0 for non-adhd label
                         }
                     }
                 }
-                using (StreamWriter sw = new StreamWriter(@$"C:\Users\warnn\Desktop\data\control\all\all.csv"))
+                using (StreamWriter sw = new StreamWriter(@$"data\control\all\allControl.csv"))
                 {
-                    foreach (var file in Directory.GetFiles(@"C:\Users\warnn\Desktop\data\control"))
+                    foreach (var file in Directory.GetFiles(@"data\control"))
                     {
                         sw.WriteLine(new StreamReader(file).ReadToEnd());
                     }
                 }
+            });
+
+
+        private DelegateCommand _trainCommand;
+        public DelegateCommand TrainCommand =>
+            _trainCommand ??= new DelegateCommand(() =>
+            {
+                _httpService.Train(NumberOfParts);
+            });
+
+        private DelegateCommand _browseClassificationFileCommand;
+        public DelegateCommand BrowseClassificationFileCommand =>
+            _browseClassificationFileCommand ??= new DelegateCommand(() =>
+            {
+
+                OpenFileDialog o = new OpenFileDialog();
+                if (o.ShowDialog() == true)
+                {
+                    SelectedClassificationFilePath = o.FileName;
+                    //IsUploadButtonEnabled = true;
+                }
+            });
+
+        private DelegateCommand _classifyCommand;
+        public DelegateCommand ClassifyCommand =>
+            _classifyCommand ??= new DelegateCommand(async () =>
+            {
+                IsAdhd = "";
+                List<double> data = new List<double>();
+                using (var sr = new StreamReader(SelectedClassificationFilePath))
+                {
+                    var recordingMatrix = await _recordingsService.ReadRecordingFile(SelectedClassificationFilePath);
+                    var row = GetRow(recordingMatrix, SelectedTrainingChannel);
+                    for (int j = 0; j < NumberOfParts; j++)
+                    {
+                        var l = new double[5];
+                        (double[] freqs, double[] psd) = await _httpService.Welch(row.Skip(j * row.Length / NumberOfParts).Take(row.Length / NumberOfParts).ToArray(), SecondsForWelch, NumHz);
+                        for (int k = 0; k < psd.Length; k++)
+                        {
+                            if (freqs[k] < 4) l[0] += psd[k];
+                            else if (freqs[k] >= 4 && freqs[k] <= 7) l[1] += psd[k];
+                            else if (freqs[k] >= 8 && freqs[k] <= 15) l[2] += psd[k];
+                            else if (freqs[k] >= 16 && freqs[k] <= 31) l[3] += psd[k];
+                            else if (freqs[k] >= 32) l[4] += psd[k];
+                        }
+                        data.Add(l[(int)SelectedTrainingWaveType]);
+                    }
+                }
+                IsAdhd = await _httpService.Predict(data.ToArray());
             });
 
         public string Title => "Train";

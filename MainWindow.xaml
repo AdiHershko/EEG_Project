@@ -13,6 +13,7 @@
         <converters:BoolToVisConverter x:Key="BoolToVisConverter"/>
     </Window.Resources>
     <StackPanel Orientation="Vertical">
+        <Button Content="Training and classifications" Command="{Binding OpenTrainModelDialogCommand}"/>
         <DockPanel>
             <TextBox IsEnabled="False" Text="{Binding SelectedRecordingPath}" Height="30" Width="500"/>
             <Button Content="Browse recording" Command="{Binding BrowseCommand}" Height="30"/>
@@ -62,7 +63,6 @@
                         </i:Interaction.Triggers>
                     </ComboBox>
                     <Button Content="Build data for all channels" Command="{Binding BuildDataCommand}"/>
-                    <Button Content="Model training" Command="{Binding OpenTrainModelDialogCommand}"/>
                 </DockPanel>
                 <oxy:PlotView Model="{Binding PartialWavesModel}" Height="200"/>
             </StackPanel>

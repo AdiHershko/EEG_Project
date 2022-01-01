@@ -1,8 +1,3 @@
-from scipy import signal
-from flask import Flask, request, Response
-import json
-from flask import jsonify
-import pandas as pd
 import numpy as np
 from scipy.spatial import distance
 from sklearn.model_selection import train_test_split
@@ -13,52 +8,8 @@ import joblib
 import os
 
 
-app = Flask(__name__)
-
-
-@app.route('/welch', methods=['POST'], endpoint='welch')
-def welch():
-    time_segment = int(request.form.get('time'))
-    num_hz = int(request.form.get('hz'))
-    channel = int(request.form.get('channel'))
-    data = request.form.get('data')
-    data = json.loads(data)
-    data = np.array(data[channel])
-    win = time_segment * num_hz
-    freqs, psd = signal.welch(data, 100, nperseg=win)
-    return jsonify((pd.Series(freqs).to_json(orient='values')), pd.Series(psd).to_json(orient='values'))
-
-
-@app.route('/welch1d', methods=['POST'], endpoint='welch1d')
-def welch():
-    time_segment = int(request.form.get('time'))
-    num_hz = int(request.form.get('hz'))
-    data = request.form.get('data')
-    data = json.loads(data)
-    data = np.array(data)
-    win = time_segment * num_hz
-    freqs, psd = signal.welch(data, 100, nperseg=win)
-    return jsonify((pd.Series(freqs).to_json(orient='values')), pd.Series(psd).to_json(orient='values'))
-
-
-@app.route('/training', methods=['POST'], endpoint='training')
-def training():
-    train()
-    return Response("OK", status=200, mimetype='application/json')
-
-
-@app.route('/classify', methods=['POST'], endpoint='classify')
-def classify():
-    data = request.form.get('data')
-    data = json.loads(data)
-    data = np.array(data)
-    array = np.array([data])
-    result = predict(array)
-    return Response(str(result), status=200, mimetype='application/json')
-
 def train():
     # train
-    numberOfParts = int(request.form.get('numberOfParts'))
     __location__ = os.path.realpath(
         os.path.join(os.getcwd(), os.path.dirname(__file__)))
     dataAdhd = open(os.path.join(__location__, 'allAdhd.csv'))
@@ -67,8 +18,8 @@ def train():
     dataControl = np.genfromtxt(dataControl, delimiter=',')
     data = np.concatenate((dataAdhd, dataControl), axis=0)  # concat adhd and non adhd together
     np.take(data, np.random.permutation(data.shape[0]), axis=0, out=data)  # shuffle data
-    labels = data[:, numberOfParts]  # last column, 1 for adhd and 0 for no adhd
-    data = data[:, :numberOfParts]
+    labels = data[:, 15]  # last column, 1 for adhd and 0 for no adhd
+    data = data[:, :15]
 
     x_train = data
     y_train = labels
@@ -109,3 +60,10 @@ def DTW(a, b):
 
 
 
+array = np.array(
+  [6740.170285, 1090.762319, 1127.23277, 836.9781184, 1453.655927, 1052.19358, 1007.265651, 1114.154121, 950.2640184,
+   2127.347831, 1096.7244, 1197.76314, 1079.679013, 1219.983356, 914.4464512
+
+   ])
+array = np.array([array])
+predict(array)

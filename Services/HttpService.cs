@@ -46,5 +46,23 @@ namespace EEG_Project.Services
             return (freqs, psd);
         }
 
+        public async Task Train(int numberOfParts)
+        {
+            var request = new RestRequest();
+            request.Resource = "training";
+            request.AddParameter("numberOfParts", numberOfParts);
+            var response = client.Post(request);
+        }
+
+        public Task<string> Predict(double[] data)
+        {
+            var request = new RestRequest();
+            request.Resource = "classify";
+            request.AddParameter("data", JsonConvert.SerializeObject(data));
+            var response = client.Post(request);
+            var result = JsonConvert.DeserializeObject<string>(response.Content);
+            var res = float.Parse(result) == 1.0 ? "ADHD" : "NO ADHD";
+            return Task.FromResult(res);
+        }
     }
 }

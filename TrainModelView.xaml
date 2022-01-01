@@ -7,17 +7,44 @@
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
     <StackPanel Orientation="Vertical">
-        <DockPanel>
-            <Label Content="adhd folder:"/>
-            <TextBox Text="{Binding AdhdFolderPath}" MinWidth="150" IsEnabled="False"/>
-            <Button Content="Browse" Command="{Binding BrowseAdhdCommand}"/>
-            <Button Content="Process" Command="{Binding ProcessAdhdCommand}"/>
-        </DockPanel>
-        <DockPanel>
-            <Label Content="control folder:"/>
-            <TextBox Text="{Binding ControlFolderPath}" MinWidth="150" IsEnabled="False"/>
-            <Button Content="Browse" Command="{Binding BrowseControlCommand}"/>
-            <Button Content="Process" Command="{Binding ProcessControlCommand}"/>
-        </DockPanel>
+        <GroupBox Header="Training">
+            <StackPanel Orientation="Vertical">
+                <DockPanel>
+                    <Label Content="Number of parts"/>
+                    <TextBox Text="{Binding NumberOfParts}"/>
+                    <Label Content="Channel"/>
+                    <TextBox Text="{Binding SelectedTrainingChannel}"/>
+                    <Label Content="Wave type"/>
+                    <ComboBox ItemsSource="{Binding WaveTypes}" SelectedItem="{Binding SelectedTrainingWaveType}"/>
+                </DockPanel>
+                <DockPanel>
+                    <Label Content="adhd folder:"/>
+                    <TextBox Text="{Binding AdhdFolderPath}" MinWidth="150" IsEnabled="False"/>
+                    <Button Content="Browse" Command="{Binding BrowseAdhdCommand}"/>
+                    <Button Content="Process" Command="{Binding ProcessAdhdCommand}"/>
+                </DockPanel>
+                <DockPanel>
+                    <Label Content="control folder:"/>
+                    <TextBox Text="{Binding ControlFolderPath}" MinWidth="150" IsEnabled="False"/>
+                    <Button Content="Browse" Command="{Binding BrowseControlCommand}"/>
+                    <Button Content="Process" Command="{Binding ProcessControlCommand}"/>
+                </DockPanel>
+                <Button Content="Train" Command="{Binding TrainCommand}"/>
+            </StackPanel>
+        </GroupBox>
+        <GroupBox Header="Classify">
+            <StackPanel Orientation="Vertical">
+                <DockPanel>
+                    <Label Content="Classification file"/>
+                    <TextBox IsEnabled="False" Text="{Binding SelectedClassificationFilePath}" MinWidth="150"/>
+                    <Button Content="Browse" Command="{Binding BrowseClassificationFileCommand}"/>
+                </DockPanel>
+                <Button Content="Classify" Command="{Binding ClassifyCommand}"/>
+                <DockPanel>
+                    <Label Content="Classification:"/>
+                    <Label Content="{Binding IsAdhd}"/>
+                </DockPanel>
+            </StackPanel>
+        </GroupBox>
     </StackPanel>
 </UserControl>
