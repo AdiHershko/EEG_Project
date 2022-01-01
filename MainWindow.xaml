@@ -8,7 +8,7 @@
         xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
         xmlns:converters="clr-namespace:EEG_Project.Converters"
         mc:Ignorable="d"
-        Title="MainWindow" Height="800" Width="1020">
+        Title="EEG Wave analyzer" Height="800" Width="1020">
     <Window.Resources>
         <converters:BoolToVisConverter x:Key="BoolToVisConverter"/>
     </Window.Resources>
@@ -62,7 +62,7 @@
                             </i:EventTrigger>
                         </i:Interaction.Triggers>
                     </ComboBox>
-                    <Button Content="Build data for all channels" Command="{Binding BuildDataCommand}"/>
+                    <!--<Button Content="Build data for all channels" Command="{Binding BuildDataCommand}"/>-->
                 </DockPanel>
                 <oxy:PlotView Model="{Binding PartialWavesModel}" Height="200"/>
             </StackPanel>

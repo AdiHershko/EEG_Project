@@ -14,6 +14,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using static EEG_Project.Commons.WaveTypes;
 
 namespace EEG_Project
 {
@@ -22,12 +23,6 @@ namespace EEG_Project
         private IRecordingsService _recordingsService;
         private IHttpService _httpService;
         private IDialogService _dialogService;
-
-        //public MainWindowViewModel()
-        //{
-        //    _recordingsService = new RecordingsService();
-        //    _httpService = new HttpService();
-        //}
 
         public MainWindowViewModel(IDialogService dialogService, IRecordingsService recordingsService, IHttpService httpService)
         {
@@ -230,45 +225,6 @@ namespace EEG_Project
             });
         private List<double[]> wavesArrayList = new List<double[]>();
 
-        private DelegateCommand _buildDataCommand;
-        public DelegateCommand BuildDataCommand =>
-            _buildDataCommand ??= new DelegateCommand(async () =>
-            {
-                List<List<double[]>> data = new List<List<double[]>>();
-                for (int i = 0; i < NumberOfChannels; i++)
-                {
-                    var l = new List<double[]>();
-                    for (int j = 0; j < NumberOfParts; j++)
-                    {
-                        var row = GetRow(RecordingMatrix, i);
-                        (double[] freqs, double[] psd) = await Welch(row.Skip(j * row.Length / NumberOfParts).Take(row.Length / NumberOfParts).ToArray(), SecondsForWelch, NumHz);
-                        l.Add(new double[5]);
-                        for (int k = 0; k < psd.Length; k++)
-                        {
-                            if (freqs[k] < 4) l[j][0] += psd[k];
-                            else if (freqs[k] >= 4 && freqs[k] <= 7) l[j][1] += psd[k];
-                            else if (freqs[k] >= 8 && freqs[k] <= 15) l[j][2] += psd[k];
-                            else if (freqs[k] >= 16 && freqs[k] <= 31) l[j][3] += psd[k];
-                            else if (freqs[k] >= 32) l[j][4] += psd[k];
-                        }
-                    }
-                    data.Add(l);
-                }
-                using (StreamWriter sw = new StreamWriter(@"C:\Users\warnn\Desktop\data\data.csv"))
-                {
-                    for (int i = 0; i < data.Count; i++)
-                    {
-                        for (int j = 0; j < data[i].Count; j++)
-                        {
-                            for (int k = 0; k < data[i][j].Length; k++)
-                            {
-                                sw.Write($"{data[i][j][k]},");
-                            }
-                        }
-                        //sw.WriteLine();
-                    }
-                }
-            });
         #endregion
 
 
@@ -282,7 +238,7 @@ namespace EEG_Project
         private void BuildPartialWaveGraph()
         {
             var model = new PlotModel();
-            var series = new LineSeries() { Title = "Wave partial disturbution" };
+            var series = new LineSeries() { Title = "Wave partial disturbution", Color = waveColorDictionary[SelectedWaveType]};
             for (int i = 0; i < wavesArrayList.Count; i++)
             {
                 series.Points.Add(new DataPoint(i, wavesArrayList[i][(int)SelectedWaveType]));
@@ -337,7 +293,14 @@ namespace EEG_Project
 
         private double[] wavesArray = new double[5]; //delta,theta,alpha,beta,gamma
 
-        public enum WaveType { Delta = 0, Theta = 1, Alpha = 2, Beta = 3, Gamma = 4 }
+        private Dictionary<WaveType, OxyColor> waveColorDictionary = new Dictionary<WaveType, OxyColor>()
+        {
+            {WaveType.Delta, OxyColor.FromRgb(0,255,0)},
+            {WaveType.Gamma, OxyColor.FromRgb(255,0,0)},
+            {WaveType.Beta, OxyColor.FromRgb(0,0,255)},
+            {WaveType.Theta, OxyColor.FromRgb(209,195,0)},
+            {WaveType.Alpha, OxyColor.FromRgb(181,26,4)}
+        };
 
     }
 
