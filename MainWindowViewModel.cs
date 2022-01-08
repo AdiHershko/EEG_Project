@@ -213,9 +213,10 @@ namespace EEG_Project
                     for (int i = 0; i < NumberOfParts; i++)
                     {
                         var row = GetRow(RecordingMatrix, Channel);
+                        //take each part of the file and run welch on it
                         (double[] freqs, double[] psd) = await Welch(row.Skip(i * row.Length / NumberOfParts).Take(row.Length / NumberOfParts).ToArray(), SecondsForWelch, NumHz);
                         wavesArrayList.Add(new double[5]);
-                        for (int j = 0; j < psd.Length; j++)
+                        for (int j = 0; j < psd.Length; j++) //sum the waves count
                         {
                             if (freqs[j] < 4) wavesArrayList[i][(int)WaveType.Delta] += psd[j];
                             else if (freqs[j] >= 4 && freqs[j] <= 7) wavesArrayList[i][(int)WaveType.Theta] += psd[j];
@@ -278,11 +279,12 @@ namespace EEG_Project
         {
             try
             {
+                //run welch on the whole recording
                 (double[] freqs, double[] psd) = await Welch(RecordingMatrix, Channel, SecondsForWelch, NumHz);
                 var psdTempModel = new PlotModel();
                 psdTempModel.Title = "Welch";
                 var psdSeries = new LineSeries() { Title = "PSD" };
-                for (int i = 0; i < psd.Length; i++)
+                for (int i = 0; i < psd.Length; i++) //sum wave types
                 {
                     if (freqs[i] < 4) wavesArray[0] += psd[i];
                     else if (freqs[i] >= 4 && freqs[i] <= 7) wavesArray[1] += psd[i];

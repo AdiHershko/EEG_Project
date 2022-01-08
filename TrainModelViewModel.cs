@@ -128,16 +128,17 @@ namespace EEG_Project
 
                     var files = Directory.GetFiles(AdhdFolderPath);
                     int fileCounter = 0;
-                    foreach (var file in files)
+                    foreach (var file in files) //iterate every file in the folder
                     {
                         using (var sr = new StreamReader(file))
                         {
                             var recordingMatrix = await _recordingsService.ReadRecordingFile(file);
-                            List<double[]> data = new List<double[]>();
+                            List<double[]> data = new List<double[]>(); // will contain all files welch results
                             for (int j = 0; j < NumberOfParts; j++)
                             {
                                 var l = new double[5];
                                 var row = GetRow(recordingMatrix, SelectedTrainingChannel);
+                                //welch on each part
                                 (double[] freqs, double[] psd) = await _httpService.Welch(row.Skip(j * row.Length / NumberOfParts).Take(row.Length / NumberOfParts).ToArray(), SecondsForWelch, NumHz);
                                 for (int k = 0; k < psd.Length; k++)
                                 {
@@ -147,9 +148,9 @@ namespace EEG_Project
                                     else if (freqs[k] >= 16 && freqs[k] <= 31) l[(int)WaveType.Beta] += psd[k];
                                     else if (freqs[k] >= 32) l[(int)WaveType.Gamma] += psd[k];
                                 }
-                                data.Add(l);
+                                data.Add(l); //adding the data into the list
                             }
-                            using (StreamWriter sw = new StreamWriter(@$"data\adhd\{fileCounter++}.csv"))
+                            using (StreamWriter sw = new StreamWriter(@$"data\adhd\{fileCounter++}.csv")) //creating a welch data for every file
                             {
                                 for (int i = 0; i < NumberOfParts; i++)
                                 {
@@ -159,7 +160,7 @@ namespace EEG_Project
                             }
                         }
                     }
-                    using (StreamWriter sw = new StreamWriter(@$"data\adhd\all\allAdhd.csv"))
+                    using (StreamWriter sw = new StreamWriter(@$"data\adhd\all\allAdhd.csv")) //creating a file contains all the results
                     {
                         foreach (var file in Directory.GetFiles(@"data\adhd"))
                         {
@@ -188,7 +189,7 @@ namespace EEG_Project
                 {
                     var files = Directory.GetFiles(ControlFolderPath);
                     int fileCounter = 0;
-                    foreach (var file in files)
+                    foreach (var file in files) //iterate every file in the folder
                     {
                         using (var sr = new StreamReader(file))
                         {
@@ -198,6 +199,7 @@ namespace EEG_Project
                             {
                                 var l = new double[5];
                                 var row = GetRow(recordingMatrix, SelectedTrainingChannel);
+                                //welch all parts of the file
                                 (double[] freqs, double[] psd) = await _httpService.Welch(row.Skip(j * row.Length / NumberOfParts).Take(row.Length / NumberOfParts).ToArray(), SecondsForWelch, NumHz);
                                 for (int k = 0; k < psd.Length; k++)
                                 {
@@ -207,9 +209,9 @@ namespace EEG_Project
                                     else if (freqs[k] >= 16 && freqs[k] <= 31) l[(int)WaveType.Beta] += psd[k];
                                     else if (freqs[k] >= 32) l[(int)WaveType.Gamma] += psd[k];
                                 }
-                                data.Add(l);
+                                data.Add(l); //save the results
                             }
-                            using (StreamWriter sw = new StreamWriter(@$"data\control\{fileCounter++}.csv"))
+                            using (StreamWriter sw = new StreamWriter(@$"data\control\{fileCounter++}.csv")) //create a file containing wave changes
                             {
                                 for (int i = 0; i < NumberOfParts; i++)
                                 {
