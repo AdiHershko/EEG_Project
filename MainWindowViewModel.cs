@@ -14,6 +14,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows;
 using static EEG_Project.Commons.WaveTypes;
 
 namespace EEG_Project
@@ -206,22 +207,35 @@ namespace EEG_Project
         public DelegateCommand DivideAndWelchCommand =>
             _divideAndWelchCommand ??= new DelegateCommand(async () =>
             {
-                wavesArrayList.Clear();
-                for (int i = 0; i < NumberOfParts; i++)
+                try
                 {
-                    var row = GetRow(RecordingMatrix, Channel);
-                    (double[] freqs, double[] psd) = await Welch(row.Skip(i * row.Length / NumberOfParts).Take(row.Length / NumberOfParts).ToArray(), SecondsForWelch, NumHz);
-                    wavesArrayList.Add(new double[5]);
-                    for (int j = 0; j < psd.Length; j++)
+                    wavesArrayList.Clear();
+                    for (int i = 0; i < NumberOfParts; i++)
                     {
-                        if (freqs[j] < 4) wavesArrayList[i][(int)WaveType.Delta] += psd[j];
-                        else if (freqs[j] >= 4 && freqs[j] <= 7) wavesArrayList[i][(int)WaveType.Theta] += psd[j];
-                        else if (freqs[j] >= 8 && freqs[j] <= 15) wavesArrayList[i][(int)WaveType.Alpha] += psd[j];
-                        else if (freqs[j] >= 16 && freqs[j] <= 31) wavesArrayList[i][(int)WaveType.Beta] += psd[j];
-                        else if (freqs[j] >= 32) wavesArrayList[i][(int)WaveType.Gamma] += psd[j];
+                        var row = GetRow(RecordingMatrix, Channel);
+                        (double[] freqs, double[] psd) = await Welch(row.Skip(i * row.Length / NumberOfParts).Take(row.Length / NumberOfParts).ToArray(), SecondsForWelch, NumHz);
+                        wavesArrayList.Add(new double[5]);
+                        for (int j = 0; j < psd.Length; j++)
+                        {
+                            if (freqs[j] < 4) wavesArrayList[i][(int)WaveType.Delta] += psd[j];
+                            else if (freqs[j] >= 4 && freqs[j] <= 7) wavesArrayList[i][(int)WaveType.Theta] += psd[j];
+                            else if (freqs[j] >= 8 && freqs[j] <= 15) wavesArrayList[i][(int)WaveType.Alpha] += psd[j];
+                            else if (freqs[j] >= 16 && freqs[j] <= 31) wavesArrayList[i][(int)WaveType.Beta] += psd[j];
+                            else if (freqs[j] >= 32) wavesArrayList[i][(int)WaveType.Gamma] += psd[j];
+                        }
                     }
+                    BuildPartialWaveGraph();
                 }
-                BuildPartialWaveGraph();
+                catch (Exception)
+                {
+                    string messageBoxText = "An error has occured";
+                    string caption = "Word Processor";
+                    MessageBoxButton button = MessageBoxButton.OK;
+                    MessageBoxImage icon = MessageBoxImage.Warning;
+                    MessageBoxResult result;
+                    result = MessageBox.Show(messageBoxText, caption, button, icon, MessageBoxResult.Yes);
+                    return;
+                }
             });
         private List<double[]> wavesArrayList = new List<double[]>();
 
@@ -262,21 +276,34 @@ namespace EEG_Project
 
         private async Task BuildWelchGraph()
         {
-            (double[] freqs, double[] psd) = await Welch(RecordingMatrix, Channel, SecondsForWelch, NumHz);
-            var psdTempModel = new PlotModel();
-            psdTempModel.Title = "Welch";
-            var psdSeries = new LineSeries() { Title = "PSD" };
-            for (int i = 0; i < psd.Length; i++)
+            try
             {
-                if (freqs[i] < 4) wavesArray[0] += psd[i];
-                else if (freqs[i] >= 4 && freqs[i] <= 7) wavesArray[1] += psd[i];
-                else if (freqs[i] >= 8 && freqs[i] <= 15) wavesArray[2] += psd[i];
-                else if (freqs[i] >= 16 && freqs[i] <= 31) wavesArray[3] += psd[i];
-                else if (freqs[i] >= 32) wavesArray[4] += psd[i];
-                psdSeries.Points.Add(new DataPoint(freqs[i], psd[i]));
+                (double[] freqs, double[] psd) = await Welch(RecordingMatrix, Channel, SecondsForWelch, NumHz);
+                var psdTempModel = new PlotModel();
+                psdTempModel.Title = "Welch";
+                var psdSeries = new LineSeries() { Title = "PSD" };
+                for (int i = 0; i < psd.Length; i++)
+                {
+                    if (freqs[i] < 4) wavesArray[0] += psd[i];
+                    else if (freqs[i] >= 4 && freqs[i] <= 7) wavesArray[1] += psd[i];
+                    else if (freqs[i] >= 8 && freqs[i] <= 15) wavesArray[2] += psd[i];
+                    else if (freqs[i] >= 16 && freqs[i] <= 31) wavesArray[3] += psd[i];
+                    else if (freqs[i] >= 32) wavesArray[4] += psd[i];
+                    psdSeries.Points.Add(new DataPoint(freqs[i], psd[i]));
+                }
+                psdTempModel.Series.Add(psdSeries);
+                WelchModel = psdTempModel;
             }
-            psdTempModel.Series.Add(psdSeries);
-            WelchModel = psdTempModel;
+            catch (Exception)
+            {
+                string messageBoxText = "An error has occured";
+                string caption = "Word Processor";
+                MessageBoxButton button = MessageBoxButton.OK;
+                MessageBoxImage icon = MessageBoxImage.Warning;
+                MessageBoxResult result;
+                result = MessageBox.Show(messageBoxText, caption, button, icon, MessageBoxResult.Yes);
+                return;
+            }
         }
 
         private async Task<(double[], double[])> Welch(double[,] recordingMatrix, int channel, int secondsForWelch, int numHz)

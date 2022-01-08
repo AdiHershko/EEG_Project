@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Windows;
 using static EEG_Project.Commons.WaveTypes;
 
 namespace EEG_Project
@@ -121,45 +122,60 @@ namespace EEG_Project
         public DelegateCommand ProcessAdhdCommand =>
             _processAdhdCommand ??= new DelegateCommand(async () =>
             {
-                var files = Directory.GetFiles(AdhdFolderPath);
-                int fileCounter = 0;
-                foreach (var file in files)
+                try
                 {
-                    using (var sr = new StreamReader(file))
+
+
+                    var files = Directory.GetFiles(AdhdFolderPath);
+                    int fileCounter = 0;
+                    foreach (var file in files)
                     {
-                        var recordingMatrix = await _recordingsService.ReadRecordingFile(file);
-                        List<double[]> data = new List<double[]>();
-                        for (int j = 0; j < NumberOfParts; j++)
+                        using (var sr = new StreamReader(file))
                         {
-                            var l = new double[5];
-                            var row = GetRow(recordingMatrix, SelectedTrainingChannel);
-                            (double[] freqs, double[] psd) = await _httpService.Welch(row.Skip(j * row.Length / NumberOfParts).Take(row.Length / NumberOfParts).ToArray(), SecondsForWelch, NumHz);
-                            for (int k = 0; k < psd.Length; k++)
+                            var recordingMatrix = await _recordingsService.ReadRecordingFile(file);
+                            List<double[]> data = new List<double[]>();
+                            for (int j = 0; j < NumberOfParts; j++)
                             {
-                                if (freqs[k] < 4) l[(int)WaveType.Delta] += psd[k];
-                                else if (freqs[k] >= 4 && freqs[k] <= 7) l[(int)WaveType.Theta] += psd[k];
-                                else if (freqs[k] >= 8 && freqs[k] <= 15) l[(int)WaveType.Alpha] += psd[k];
-                                else if (freqs[k] >= 16 && freqs[k] <= 31) l[(int)WaveType.Beta] += psd[k];
-                                else if (freqs[k] >= 32) l[(int)WaveType.Gamma] += psd[k];
+                                var l = new double[5];
+                                var row = GetRow(recordingMatrix, SelectedTrainingChannel);
+                                (double[] freqs, double[] psd) = await _httpService.Welch(row.Skip(j * row.Length / NumberOfParts).Take(row.Length / NumberOfParts).ToArray(), SecondsForWelch, NumHz);
+                                for (int k = 0; k < psd.Length; k++)
+                                {
+                                    if (freqs[k] < 4) l[(int)WaveType.Delta] += psd[k];
+                                    else if (freqs[k] >= 4 && freqs[k] <= 7) l[(int)WaveType.Theta] += psd[k];
+                                    else if (freqs[k] >= 8 && freqs[k] <= 15) l[(int)WaveType.Alpha] += psd[k];
+                                    else if (freqs[k] >= 16 && freqs[k] <= 31) l[(int)WaveType.Beta] += psd[k];
+                                    else if (freqs[k] >= 32) l[(int)WaveType.Gamma] += psd[k];
+                                }
+                                data.Add(l);
                             }
-                            data.Add(l);
+                            using (StreamWriter sw = new StreamWriter(@$"data\adhd\{fileCounter++}.csv"))
+                            {
+                                for (int i = 0; i < NumberOfParts; i++)
+                                {
+                                    sw.Write($"{data[i][(int)SelectedTrainingWaveType]},");
+                                }
+                                sw.Write("1"); //1 for adhd label
+                            }
                         }
-                        using (StreamWriter sw = new StreamWriter(@$"data\adhd\{fileCounter++}.csv"))
+                    }
+                    using (StreamWriter sw = new StreamWriter(@$"data\adhd\all\allAdhd.csv"))
+                    {
+                        foreach (var file in Directory.GetFiles(@"data\adhd"))
                         {
-                            for (int i = 0; i < NumberOfParts; i++)
-                            {
-                                sw.Write($"{data[i][(int)SelectedTrainingWaveType]},");
-                            }
-                            sw.Write("1"); //1 for adhd label
+                            sw.WriteLine(new StreamReader(file).ReadToEnd());
                         }
                     }
                 }
-                using (StreamWriter sw = new StreamWriter(@$"data\adhd\all\allAdhd.csv"))
+                catch(Exception)
                 {
-                    foreach (var file in Directory.GetFiles(@"data\adhd"))
-                    {
-                        sw.WriteLine(new StreamReader(file).ReadToEnd());
-                    }
+                    string messageBoxText = "An error has occured";
+                    string caption = "Word Processor";
+                    MessageBoxButton button = MessageBoxButton.OK;
+                    MessageBoxImage icon = MessageBoxImage.Warning;
+                    MessageBoxResult result;
+                    result = MessageBox.Show(messageBoxText, caption, button, icon, MessageBoxResult.Yes);
+                    return;
                 }
             });
 
@@ -168,46 +184,59 @@ namespace EEG_Project
         public DelegateCommand ProcessControlCommand =>
             _processControlCommand ??= new DelegateCommand(async () =>
             {
-                var files = Directory.GetFiles(ControlFolderPath);
-                int fileCounter = 0;
-                foreach (var file in files)
+                try
                 {
-                    using (var sr = new StreamReader(file))
+                    var files = Directory.GetFiles(ControlFolderPath);
+                    int fileCounter = 0;
+                    foreach (var file in files)
                     {
-                        var recordingMatrix = await _recordingsService.ReadRecordingFile(file);
-                        List<double[]> data = new List<double[]>();
-                        for (int j = 0; j < NumberOfParts; j++)
+                        using (var sr = new StreamReader(file))
                         {
-                            var l = new double[5];
-                            var row = GetRow(recordingMatrix, SelectedTrainingChannel);
-                            (double[] freqs, double[] psd) = await _httpService.Welch(row.Skip(j * row.Length / NumberOfParts).Take(row.Length / NumberOfParts).ToArray(), SecondsForWelch, NumHz);
-                            for (int k = 0; k < psd.Length; k++)
+                            var recordingMatrix = await _recordingsService.ReadRecordingFile(file);
+                            List<double[]> data = new List<double[]>();
+                            for (int j = 0; j < NumberOfParts; j++)
                             {
-                                if (freqs[k] < 4) l[(int)WaveType.Delta] += psd[k];
-                                else if (freqs[k] >= 4 && freqs[k] <= 7) l[(int)WaveType.Theta] += psd[k];
-                                else if (freqs[k] >= 8 && freqs[k] <= 15) l[(int)WaveType.Alpha] += psd[k];
-                                else if (freqs[k] >= 16 && freqs[k] <= 31) l[(int)WaveType.Beta] += psd[k];
-                                else if (freqs[k] >= 32) l[(int)WaveType.Gamma] += psd[k];
+                                var l = new double[5];
+                                var row = GetRow(recordingMatrix, SelectedTrainingChannel);
+                                (double[] freqs, double[] psd) = await _httpService.Welch(row.Skip(j * row.Length / NumberOfParts).Take(row.Length / NumberOfParts).ToArray(), SecondsForWelch, NumHz);
+                                for (int k = 0; k < psd.Length; k++)
+                                {
+                                    if (freqs[k] < 4) l[(int)WaveType.Delta] += psd[k];
+                                    else if (freqs[k] >= 4 && freqs[k] <= 7) l[(int)WaveType.Theta] += psd[k];
+                                    else if (freqs[k] >= 8 && freqs[k] <= 15) l[(int)WaveType.Alpha] += psd[k];
+                                    else if (freqs[k] >= 16 && freqs[k] <= 31) l[(int)WaveType.Beta] += psd[k];
+                                    else if (freqs[k] >= 32) l[(int)WaveType.Gamma] += psd[k];
+                                }
+                                data.Add(l);
                             }
-                            data.Add(l);
-                        }
-                        using (StreamWriter sw = new StreamWriter(@$"data\control\{fileCounter++}.csv"))
-                        {
-                            for (int i = 0; i < NumberOfParts; i++)
+                            using (StreamWriter sw = new StreamWriter(@$"data\control\{fileCounter++}.csv"))
                             {
+                                for (int i = 0; i < NumberOfParts; i++)
+                                {
 
-                                sw.Write($"{data[i][(int)SelectedTrainingWaveType]},");
+                                    sw.Write($"{data[i][(int)SelectedTrainingWaveType]},");
+                                }
+                                sw.Write("0"); //0 for non-adhd label
                             }
-                            sw.Write("0"); //0 for non-adhd label
+                        }
+                    }
+                    using (StreamWriter sw = new StreamWriter(@$"data\control\all\allControl.csv"))
+                    {
+                        foreach (var file in Directory.GetFiles(@"data\control"))
+                        {
+                            sw.WriteLine(new StreamReader(file).ReadToEnd());
                         }
                     }
                 }
-                using (StreamWriter sw = new StreamWriter(@$"data\control\all\allControl.csv"))
+                catch (Exception)
                 {
-                    foreach (var file in Directory.GetFiles(@"data\control"))
-                    {
-                        sw.WriteLine(new StreamReader(file).ReadToEnd());
-                    }
+                    string messageBoxText = "An error has occured";
+                    string caption = "Word Processor";
+                    MessageBoxButton button = MessageBoxButton.OK;
+                    MessageBoxImage icon = MessageBoxImage.Warning;
+                    MessageBoxResult result;
+                    result = MessageBox.Show(messageBoxText, caption, button, icon, MessageBoxResult.Yes);
+                    return;
                 }
             });
 
@@ -216,7 +245,20 @@ namespace EEG_Project
         public DelegateCommand TrainCommand =>
             _trainCommand ??= new DelegateCommand(() =>
             {
-                _httpService.Train(NumberOfParts);
+                try
+                {
+                    _httpService.Train(NumberOfParts);
+                }
+                catch (Exception)
+                {
+                    string messageBoxText = "An error has occured";
+                    string caption = "Word Processor";
+                    MessageBoxButton button = MessageBoxButton.OK;
+                    MessageBoxImage icon = MessageBoxImage.Warning;
+                    MessageBoxResult result;
+                    result = MessageBox.Show(messageBoxText, caption, button, icon, MessageBoxResult.Yes);
+                    return;
+                }
             });
 
         private DelegateCommand _browseClassificationFileCommand;
@@ -236,28 +278,41 @@ namespace EEG_Project
         public DelegateCommand ClassifyCommand =>
             _classifyCommand ??= new DelegateCommand(async () =>
             {
-                IsAdhd = "";
-                List<double> data = new List<double>();
-                using (var sr = new StreamReader(SelectedClassificationFilePath))
+                try
                 {
-                    var recordingMatrix = await _recordingsService.ReadRecordingFile(SelectedClassificationFilePath);
-                    var row = GetRow(recordingMatrix, SelectedTrainingChannel);
-                    for (int j = 0; j < NumberOfParts; j++)
+                    IsAdhd = "";
+                    List<double> data = new List<double>();
+                    using (var sr = new StreamReader(SelectedClassificationFilePath))
                     {
-                        var l = new double[5];
-                        (double[] freqs, double[] psd) = await _httpService.Welch(row.Skip(j * row.Length / NumberOfParts).Take(row.Length / NumberOfParts).ToArray(), SecondsForWelch, NumHz);
-                        for (int k = 0; k < psd.Length; k++)
+                        var recordingMatrix = await _recordingsService.ReadRecordingFile(SelectedClassificationFilePath);
+                        var row = GetRow(recordingMatrix, SelectedTrainingChannel);
+                        for (int j = 0; j < NumberOfParts; j++)
                         {
-                            if (freqs[k] < 4) l[0] += psd[k];
-                            else if (freqs[k] >= 4 && freqs[k] <= 7) l[1] += psd[k];
-                            else if (freqs[k] >= 8 && freqs[k] <= 15) l[2] += psd[k];
-                            else if (freqs[k] >= 16 && freqs[k] <= 31) l[3] += psd[k];
-                            else if (freqs[k] >= 32) l[4] += psd[k];
+                            var l = new double[5];
+                            (double[] freqs, double[] psd) = await _httpService.Welch(row.Skip(j * row.Length / NumberOfParts).Take(row.Length / NumberOfParts).ToArray(), SecondsForWelch, NumHz);
+                            for (int k = 0; k < psd.Length; k++)
+                            {
+                                if (freqs[k] < 4) l[0] += psd[k];
+                                else if (freqs[k] >= 4 && freqs[k] <= 7) l[1] += psd[k];
+                                else if (freqs[k] >= 8 && freqs[k] <= 15) l[2] += psd[k];
+                                else if (freqs[k] >= 16 && freqs[k] <= 31) l[3] += psd[k];
+                                else if (freqs[k] >= 32) l[4] += psd[k];
+                            }
+                            data.Add(l[(int)SelectedTrainingWaveType]);
                         }
-                        data.Add(l[(int)SelectedTrainingWaveType]);
                     }
+                    IsAdhd = await _httpService.Predict(data.ToArray());
                 }
-                IsAdhd = await _httpService.Predict(data.ToArray());
+                catch (Exception)
+                {
+                    string messageBoxText = "An error has occured";
+                    string caption = "Word Processor";
+                    MessageBoxButton button = MessageBoxButton.OK;
+                    MessageBoxImage icon = MessageBoxImage.Warning;
+                    MessageBoxResult result;
+                    result = MessageBox.Show(messageBoxText, caption, button, icon, MessageBoxResult.Yes);
+                    return;
+                }
             });
 
         public string Title => "Train";
