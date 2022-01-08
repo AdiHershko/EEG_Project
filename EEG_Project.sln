@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30517.126
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EEG_Project", "EEG_Project.csproj", "{8C9527E9-BB1B-4BB7-8E61-AF83132B87AB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EEG_Project", "EEG_Project.csproj", "{8C9527E9-BB1B-4BB7-8E61-AF83132B87AB}"
+EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "Setup", "..\Setup\Setup.vdproj", "{E946D92E-2120-4905-881A-976B19C46342}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,8 @@ Global
 		{8C9527E9-BB1B-4BB7-8E61-AF83132B87AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8C9527E9-BB1B-4BB7-8E61-AF83132B87AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8C9527E9-BB1B-4BB7-8E61-AF83132B87AB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E946D92E-2120-4905-881A-976B19C46342}.Debug|Any CPU.ActiveCfg = Debug
+		{E946D92E-2120-4905-881A-976B19C46342}.Release|Any CPU.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
