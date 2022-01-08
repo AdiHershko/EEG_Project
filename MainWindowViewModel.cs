@@ -29,7 +29,6 @@ namespace EEG_Project
             _dialogService = dialogService;
             _recordingsService = recordingsService;
             _httpService = httpService;
-
         }
 
 
@@ -149,6 +148,7 @@ namespace EEG_Project
             _browseCommand ??= new DelegateCommand(() =>
             {
                 OpenFileDialog o = new OpenFileDialog();
+                o.Filter = "CSV Files (*.csv)|*.csv";
                 if (o.ShowDialog() == true)
                 {
                     SelectedRecordingPath = o.FileName;
@@ -214,11 +214,11 @@ namespace EEG_Project
                     wavesArrayList.Add(new double[5]);
                     for (int j = 0; j < psd.Length; j++)
                     {
-                        if (freqs[j] < 4) wavesArrayList[i][0] += psd[j];
-                        else if (freqs[j] >= 4 && freqs[j] <= 7) wavesArrayList[i][1] += psd[j];
-                        else if (freqs[j] >= 8 && freqs[j] <= 15) wavesArrayList[i][2] += psd[j];
-                        else if (freqs[j] >= 16 && freqs[j] <= 31) wavesArrayList[i][3] += psd[j];
-                        else if (freqs[j] >= 32) wavesArrayList[i][4] += psd[j];
+                        if (freqs[j] < 4) wavesArrayList[i][(int)WaveType.Delta] += psd[j];
+                        else if (freqs[j] >= 4 && freqs[j] <= 7) wavesArrayList[i][(int)WaveType.Theta] += psd[j];
+                        else if (freqs[j] >= 8 && freqs[j] <= 15) wavesArrayList[i][(int)WaveType.Alpha] += psd[j];
+                        else if (freqs[j] >= 16 && freqs[j] <= 31) wavesArrayList[i][(int)WaveType.Beta] += psd[j];
+                        else if (freqs[j] >= 32) wavesArrayList[i][(int)WaveType.Gamma] += psd[j];
                     }
                 }
                 BuildPartialWaveGraph();
